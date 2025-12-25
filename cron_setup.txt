@@ -1,0 +1,21 @@
+
+# -------------------------------------------------------------
+# Instructions to Install Cron Job
+# -------------------------------------------------------------
+
+# 1. Open your crontab editor:
+crontab -e
+
+# 2. Paste the following line at the bottom:
+0 * * * * cd /Users/bhrushiravyas/Facbookmv && /Users/bhrushiravyas/Facbookmv/.venv/bin/python3 facebook_poster.py --cron >> /Users/bhrushiravyas/Facbookmv/cron.log 2>&1
+
+# 3. Save and close.
+# (If using vim, press ESC, type :wq, and press Enter)
+
+# -------------------------------------------------------------
+# What this does:
+# - Runs every hour (at minute 0).
+# - Changes directory to the project folder (required for .env/json files).
+# - Runs the python script with --cron flag (ensures it runs once and quits).
+# - Logs all output/errors to cron.log.
+# -------------------------------------------------------------

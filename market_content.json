@@ -1,0 +1,112 @@
+{
+    "templates": [
+        {
+            "id": "psychology_fomo",
+            "category": "Trading Psychology",
+            "title": "🧠 Trading Psychology: The Fear of Missing Out (FOMO)",
+            "core_idea": "FOMO causes traders to enter late, emotionally, and without defined risk.",
+            "description": "FOMO is one of the fastest ways to damage or blow up a trading account. When price moves aggressively, early participants are taking profits while late traders are providing liquidity. Emotional entries lead to poor risk-reward and bad decision-making.",
+            "rules": [
+                "Do not chase parabolic green candles",
+                "Wait for pullbacks, consolidations, or flags",
+                "Missed trades are better than bad trades",
+                "The market provides opportunities every day"
+            ],
+            "pro_insight": "If a setup is real, it will offer multiple entries. If it doesn't, it wasn't your trade.",
+            "common_mistakes": [
+                "Buying the top of extended moves",
+                "Ignoring stop losses due to excitement",
+                "Increasing size out of fear of missing profits"
+            ],
+            "mantra": "Discipline > Speed | Patience > Impulse"
+        },
+        {
+            "id": "technical_support_flip",
+            "category": "Technical Analysis",
+            "title": "📉 Technical Analysis: Support & Resistance Flip",
+            "core_idea": "Previous resistance often becomes new support after a breakout.",
+            "description": "Support and resistance flips occur when price breaks above a key resistance level and then retraces to test that level. Buyers often defend this area, confirming the breakout and offering a safer entry.",
+            "steps": [
+                "Price breaks above a well-defined resistance level",
+                "Momentum pauses or pulls back",
+                "Price retests the prior resistance",
+                "Buyers step in and hold the level"
+            ],
+            "entry_confirmation": [
+                "Bullish candle close at support",
+                "Wick rejection below the level",
+                "Reduced volume on pullback"
+            ],
+            "risk_management": {
+                "stop_loss": "Below the flipped support level",
+                "risk_reward": "Minimum 2:1 recommended"
+            },
+            "pro_insight": "Breakouts excite beginners. Retests reward professionals."
+        },
+        {
+            "id": "risk_1_percent_rule",
+            "category": "Risk Management",
+            "title": "🛡️ Risk Management: The 1% Rule",
+            "core_idea": "Never risk more than 1–2% of total account equity on a single trade.",
+            "description": "Risk management is the foundation of long-term profitability. The 1% rule ensures that no single trade can significantly damage your account, allowing you to survive losing streaks and trade consistently.",
+            "example": {
+                "account_size": 10000,
+                "max_risk_percent": 1,
+                "max_dollar_risk": 100,
+                "stop_loss_distance": 1,
+                "position_size": 100
+            },
+            "rules": [
+                "Position size is determined by stop-loss distance",
+                "No stop loss means no trade",
+                "Conviction does not equal size"
+            ],
+            "pro_insight": "Survive first. Profit second. Compound always."
+        },
+        {
+            "id": "volume_confirmation",
+            "category": "Volume Analysis",
+            "title": "📊 Volume Analysis: Confirming the Move",
+            "core_idea": "Volume confirms the strength and validity of price movements.",
+            "description": "Volume reveals participation and intent behind price action. Strong moves require strong volume. Weak volume often signals fakeouts or exhausted trends.",
+            "signals": {
+                "bullish": [
+                    "Breakout with increasing volume",
+                    "Higher volume on trend continuation"
+                ],
+                "bearish": [
+                    "Breakout on declining volume",
+                    "Volume divergence near highs or lows"
+                ]
+            },
+            "rules": [
+                "Always check volume before entering trades",
+                "Reduce size if volume confirmation is weak",
+                "High volume at extremes can signal reversals"
+            ],
+            "pro_insight": "Volume is the lie detector of price action."
+        },
+        {
+            "id": "trend_golden_cross",
+            "category": "Trend Following",
+            "title": "📈 Trend Following: Golden Cross Watch",
+            "core_idea": "A Golden Cross signals long-term trend confirmation, not prediction.",
+            "description": "A Golden Cross occurs when the 50-day moving average crosses above the 200-day moving average. It is widely followed by institutions and often aligns with long-term bullish momentum.",
+            "conditions": [
+                "Price above both moving averages",
+                "Higher highs and higher lows present",
+                "Volume supports the trend"
+            ],
+            "limitations": [
+                "Lagging indicator",
+                "False signals in sideways markets",
+                "Should not be used alone"
+            ],
+            "best_use": [
+                "Trend confirmation",
+                "Pullback entries within established trends"
+            ],
+            "pro_insight": "Do not predict trends. Follow them."
+        }
+    ]
+}

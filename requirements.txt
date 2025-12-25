@@ -1,0 +1,9 @@
+requests
+apscheduler
+python-dotenv
+yfinance
+transformers
+diffusers
+torch
+accelerate
+pillow

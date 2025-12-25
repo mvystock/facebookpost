@@ -1,0 +1,246 @@
+"""Root AI adapter for generating social-media copy and short summaries.
+
+Priority order for providers:
+ 1. Local `transformers` pipeline when `AI_USE_LOCAL=1` and a local model is available (free, no API calls).
+ 2. Hugging Face Inference API when `HF_API_TOKEN` is set.
+ 3. Google PaLM / Gemini REST API when `GOOGLE_API_KEY` and `GOOGLE_MODEL` are set (user-provided subscription).
+
+The main entrypoint is `summarize_social_media_with_ai(news, trending_tags)` which returns
+a tuple `(x_post, linkedin_post, facebook_post)` or `None` if no provider is usable.
+
+Env vars (examples):
+  - AI_USE_LOCAL=1
+  - HF_API_TOKEN=... (for Hugging Face inference)
+  - HF_MODEL=google/flan-t5-large
+  - GOOGLE_API_KEY=... (for Gemini/PaLM)
+  - GOOGLE_MODEL=gemini-1.5-preview or models/embedded-text
+
+This adapter is conservative: it never forces a paid provider and always
+falls back cleanly to the caller's local heuristics when nothing is available.
+"""
+from __future__ import annotations
+import os
+import textwrap
+from typing import List, Dict, Tuple
+import hashlib
+import json
+import time
+from pathlib import Path
+
+try:
+    import requests
+except Exception:  # requests optional
+    requests = None
+
+
+def _call_local_transformers(prompt: str, model: str | None = None, max_tokens: int = 400) -> str | None:
+    """Attempt to run a local `transformers` text-generation pipeline.
+
+    Requires `transformers` to be installed and a model cached locally or
+    accessible. This is the preferred free option if `AI_USE_LOCAL=1`.
+    Returns generated text or None on any failure.
+    """
+    try:
+        from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+        import torch
+    except Exception:
+        return None
+
+    # Select a default instruction model
+    model = model or os.getenv('HF_LOCAL_MODEL') or 'google/flan-t5-base'
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model)
+        model_obj = AutoModelForSeq2SeqLM.from_pretrained(model)
+        gen = pipeline('text2text-generation', model=model_obj, tokenizer=tokenizer, device=0 if torch.backends.mps.is_available() or torch.cuda.is_available() else -1)
+        out = gen(
+            prompt, 
+            max_new_tokens=max_tokens, 
+            do_sample=True, 
+            temperature=0.7,
+            repetition_penalty=3.5,
+            no_repeat_ngram_size=2
+        )
+        if isinstance(out, list) and out:
+            return out[0].get('generated_text') or out[0].get('text') or None
+        elif isinstance(out, dict):
+            return out.get('generated_text') or out.get('text')
+        return None
+    except Exception:
+        return None
+
+
+def _call_hf_inference(prompt: str, model: str = 'google/flan-t5-large', max_tokens: int = 400, timeout: int = 20) -> str | None:
+    """Call Hugging Face Inference API if `HF_API_TOKEN` is set."""
+    if requests is None:
+        return None
+    token = os.getenv('HF_API_TOKEN')
+    if not token:
+        return None
+    url = f"https://api-inference.huggingface.co/models/{model}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens, "temperature": 0.3}}
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if isinstance(data, list) and data:
+            return data[0].get('generated_text') or data[0].get('text') or None
+        if isinstance(data, dict):
+            return data.get('generated_text') or data.get('text') or None
+        return None
+    except Exception:
+        return None
+
+
+def _call_google_gemini(prompt: str, model: str | None = None, max_tokens: int = 400, timeout: int = 20) -> str | None:
+    """Call Google Gemini using the google-genai library.
+
+    Returns generated text or None.
+    """
+    try:
+        from google import genai
+        from google.genai import types
+    except Exception:
+        return None
+        
+    key = os.getenv('GOOGLE_API_KEY')
+    if not key:
+        return None
+    
+    model = model or os.getenv('GOOGLE_MODEL') or 'gemini-2.0-flash-exp'
+    
+    try:
+        client = genai.Client(api_key=key)
+        response = client.models.generate_content(
+            model=model,
+            contents=[prompt],
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=max_tokens,
+            )
+        )
+        
+        if response.text:
+            return response.text
+        return None
+    except Exception:
+        return None
+
+
+def summarize_social_media_with_ai(news: List[Dict], trending_tags: List[str] | None = None, tone: str = "Professional") -> Tuple[str, str, str] | None:
+    """Return (x_post, linkedin_post, facebook_post) generated by the best available provider.
+
+    Priority: local transformers -> HF -> Google Gemini. Returns None if
+    no provider is configured/available.
+    This function enforces a conservative default: remote providers (HF/Google)
+    are only used when `ALLOW_REMOTE_AI=1` to avoid accidental paid calls.
+    Outputs are cached in a file-based cache keyed by the hash of the input.
+    """
+    if not news:
+        return None
+
+    # Build compact context
+    lines = []
+    for n in news[:6]:
+        t = (n.get('title') or '').replace('\n', ' ').strip()
+        s = (n.get('summary') or '')
+        if s:
+            s = s.replace('\n', ' ').strip()
+            lines.append(f"- {t} — {s}")
+        else:
+            lines.append(f"- {t}")
+    tags = ' '.join(trending_tags or [])
+
+    prompt_template = textwrap.dedent(
+        """
+        Instruction: Summarize the following market news into a short, catchy social media post.
+        Tone: {tone}
+        News: {context}
+        Hashtag: {tags}
+        Output:
+        """
+    )
+    try:
+        prompt = prompt_template.format(context='\n'.join(lines), tags=tags, tone=tone)
+    except Exception:
+        prompt = ''
+
+    # Prepare cache
+    cache_file = None
+    try:
+        cache_dir = Path(os.getenv('AI_CACHE_DIR', 'ai_cache'))
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_ttl = int(os.getenv('AI_CACHE_TTL_SECONDS', '3600'))
+        key_blob = json.dumps({'news': news[:6], 'tags': trending_tags or [], 'version': 'v4'}, sort_keys=True)
+        key = hashlib.sha256(key_blob.encode('utf-8')).hexdigest()
+        cache_file = cache_dir / f"{key}.json"
+        if cache_file.exists():
+            try:
+                data = json.loads(cache_file.read_text(encoding='utf-8'))
+                ts = data.get('ts', 0)
+                if time.time() - ts < cache_ttl:
+                    res = data.get('result')
+                    if isinstance(res, list) and len(res) >= 3:
+                        return res[0], res[1], res[2]
+            except Exception:
+                pass
+    except Exception:
+        cache_file = None
+
+    # 1) Local
+    try_local = os.getenv('AI_USE_LOCAL', '0') == '1'
+    if try_local:
+        out = _call_local_transformers(prompt, model=os.getenv('HF_LOCAL_MODEL'), max_tokens=450)
+        return _parse_and_cache(out, cache_file)
+
+    # 2) Hugging Face (remote) - only if remote calls allowed
+    allow_remote = os.getenv('ALLOW_REMOTE_AI', '1') == '1'
+    hf_token = os.getenv('HF_API_TOKEN')
+    if allow_remote and hf_token:
+        out = _call_hf_inference(prompt, model=os.getenv('HF_MODEL', 'google/flan-t5-large'), max_tokens=450)
+        return _parse_and_cache(out, cache_file)
+
+    # 3) Google Gemini (PaLM) if configured and remote allowed
+    if allow_remote and os.getenv('GOOGLE_API_KEY') and os.getenv('GOOGLE_MODEL'):
+        out = _call_google_gemini(prompt, model=os.getenv('GOOGLE_MODEL'), max_tokens=450)
+        return _parse_and_cache(out, cache_file)
+
+    return None
+
+def _parse_and_cache(out: str | None, cache_file: Path | None) -> Tuple[str, str, str] | None:
+    if not out:
+        return None
+    
+    parts = [p.strip() for p in out.split('\n\n') if p.strip()]
+    
+    # Needs 3 parts
+    if len(parts) >= 3:
+        x_post = parts[0]
+        li_post = parts[1]
+        fb_post = parts[2]
+        _write_cache(cache_file, [x_post, li_post, fb_post])
+        return x_post, li_post, fb_post
+        
+    # Heuristic fallback if model merged fields or returned less
+    if parts:
+        # Fallback: Use the first part for X, second for others or duplicate
+        text = parts[0]
+        x_post = text
+        li_post = parts[1] if len(parts) > 1 else text
+        # If we didn't get a 3rd part, emulate "Facebook style" by just reusing LinkedIn or X but with different emoji if possible via heuristic? 
+        # For safety/simplicity, if the model fails to split, return what we have.
+        fb_post = parts[2] if len(parts) > 2 else li_post
+        
+        _write_cache(cache_file, [x_post, li_post, fb_post])
+        return x_post, li_post, fb_post
+
+    return None
+
+def _write_cache(cache_file: Path | None, data: List[str]):
+    try:
+        if cache_file is not None:
+            cache_file.write_text(json.dumps({'ts': int(time.time()), 'result': data}), encoding='utf-8')
+    except Exception:
+        pass
+

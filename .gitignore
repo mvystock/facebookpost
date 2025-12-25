@@ -1,0 +1,29 @@
+# Environment and credentials
+.env
+*.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Generated content (large files)
+generated_content/images/*.png
+generated_content/videos/*.mp4
+generated_content/*.md
+
+# Keep directory structure
+!generated_content/images/.gitkeep
+!generated_content/videos/.gitkeep
+!generated_content/prompts/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Legacy files
+*.legacy
