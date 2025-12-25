@@ -10,12 +10,14 @@ __pycache__/
 .venv/
 venv/
 
-# Generated content (large files)
-generated_content/images/*.png
-generated_content/videos/*.mp4
-generated_content/*.md
+# Generated content - EXCLUDE EVERYTHING
+generated_content/
 
-# Keep directory structure
+# Keep directory structure only
+!generated_content/
+!generated_content/images/
+!generated_content/videos/
+!generated_content/prompts/
 !generated_content/images/.gitkeep
 !generated_content/videos/.gitkeep
 !generated_content/prompts/.gitkeep
