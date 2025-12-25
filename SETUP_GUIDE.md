@@ -35,10 +35,10 @@ Automated Facebook posting system with AI-generated content and images. Posts ed
 ## 🔑 Environment Variables (.env)
 ```bash
 # Facebook API
-PAGE_ACCESS_TOKEN="EAAd3VVmrpUMBQX1idizjQI9AvwL52Gm..."
+PAGE_ACCESS_TOKEN="your_facebook_page_access_token_here"
 PAGE_ID="283648501839927"
 APP_ID="2101533297321283"
-APP_SECRET="5ae7dd06ceb4794bdb0db9bf7cc3221d"
+APP_SECRET="your_facebook_app_secret_here"
 
 # Google Gemini API
 GOOGLE_API_KEY="your_gemini_api_key_here"
